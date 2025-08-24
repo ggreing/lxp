@@ -200,19 +200,19 @@ async def handle_chat_message(
                     embedding_model=_EMBEDDING_MODEL
                 )
 
-        conn = await rabbitmq.get_rabbitmq_connection()
+            conn = await rabbitmq.get_rabbitmq_connection()
             async with conn, conn.channel() as channel:
                 full_raw = ""
                 # The engine's stream_response is a generator, not an async generator
                 for chunk in engine.stream_response(seller_msg):
                     full_raw += chunk
-                await rabbitmq.publish_chat_response(channel, session_id, chunk, event="message")
+                    await rabbitmq.publish_chat_response(channel, session_id, chunk, event="message")
                     await get_redis_client().lpush(f"tts_queue:{session_id}", chunk)
 
                 await set_session(session_id, engine)
                 if "<대화 종료>" in full_raw:
                      await get_redis_client().set(RKEY_SESSION_CLOSED(session_id), "true")
-                 await rabbitmq.publish_chat_response(channel, session_id, "Conversation ended by AI.", event="end")
+                     await rabbitmq.publish_chat_response(channel, session_id, "Conversation ended by AI.", event="end")
 
                 await get_redis_client().publish(f"tts_done_flag:{session_id}", "done")
 
