@@ -8,11 +8,12 @@ from typing import Any, Dict
 import aio_pika
 from aio_pika import IncomingMessage
 
-from worker import rabbitmq
+from sales_persona_backend import rabbitmq
 
 try:
-    from worker import ai_assist, ai_galaxy, ai_coach, ai_translate, ai_sim
-except Exception:
+    from . import ai_assist, ai_galaxy, ai_coach, ai_translate, ai_sim
+except ImportError as e:
+    print(f"Could not import AI modules: {e}")
     ai_assist = ai_galaxy = ai_coach = ai_translate = ai_sim = None
 
 
@@ -27,8 +28,8 @@ async def _dispatch_task(routing_key: str, payload: Dict[str, Any]) -> Dict[str,
         return await ai_coach.run(payload)
     if prefix == "translate" and ai_translate and hasattr(ai_translate, "run"):
         return await ai_translate.run(payload)
-    if prefix == "sim" and ai_sim and hasattr(ai_sim, "run"):
-        return await ai_sim.run(payload)
+    if prefix == "sim" and ai_sim and hasattr(ai_sim, "control"):
+        return await ai_sim.control(payload)
 
     return {"ok": True, "echo": True, "routing_key": routing_key, "input": payload}
 
@@ -59,35 +60,44 @@ async def handle_message(channel: Any, message: IncomingMessage):
             return
 
 
-async def run() -> None:
-    conn, ch, qs = await rabbitmq.connect_robust()
+async def run_task_consumer(shutdown_event: asyncio.Event):
+    """Connects to RabbitMQ and consumes worker tasks until shutdown_event is set."""
+    connection = await rabbitmq.get_rabbitmq_connection()
 
-    # 채널 타입 로그(디버깅 용) – 원하면 제거 가능
-    try:
-        import sys
-        print(f"[worker] aio_pika={aio_pika.__version__} channel_cls={ch.__class__.__name__}", file=sys.stderr)
-    except Exception:
-        pass
+    async with connection:
+        channel = await connection.channel()
+        await channel.set_qos(prefetch_count=rabbitmq.WORKER_PREFETCH)
 
-    for _, q in qs.items():
-        await q.consume(lambda m: handle_message(ch, m), no_ack=False)
+        # The declare_topology function now returns all queues.
+        # We need to get the worker-specific queues.
+        all_queues = await rabbitmq.declare_topology(channel)
+        worker_queues = {
+            name: queue for name, queue in all_queues.items()
+            if name in ["assist", "galaxy", "coach", "translate", "sim"]
+        }
 
-    stop_event = asyncio.Event()
+        print(f" [x] Waiting for worker tasks on queues: {list(worker_queues.keys())}")
 
-    def _stop(*_):
-        stop_event.set()
+        async def consume_queue(queue: aio_pika.abc.AbstractQueue):
+            async for message in queue:
+                if shutdown_event.is_set():
+                    await message.nack(requeue=True)
+                    break
+                # Fire and forget message handling
+                asyncio.create_task(handle_message(channel, message))
 
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, _stop)
-        except NotImplementedError:
-            pass
+        consumer_tasks = [
+            asyncio.create_task(consume_queue(q)) for q in worker_queues.values()
+        ]
 
-    await stop_event.wait()
-    await ch.close()
-    await conn.close()
+        # Wait for the shutdown event to be set
+        await shutdown_event.wait()
 
+        # Gracefully stop consumers
+        print("Shutdown event received, stopping worker task consumers...")
+        for task in consumer_tasks:
+            task.cancel()
 
-if __name__ == "__main__":
-    asyncio.run(run())
+        # Wait for all consumer tasks to finish cancelling
+        await asyncio.gather(*consumer_tasks, return_exceptions=True)
+        print("Worker task consumers stopped.")

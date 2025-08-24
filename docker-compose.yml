@@ -114,18 +114,6 @@ services:
       qdrant:
         condition: service_started
 
-  worker:
-    build: ./worker
-    env_file: .env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      mongo:
-        condition: service_started
-      minio:
-        condition: service_started
-      qdrant:
-        condition: service_started
 volumes:
   rabbitmq_data:
   mongo_data:
