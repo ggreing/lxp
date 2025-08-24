@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend API Test Frontend</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Backend API Test Frontend</h1>
+
+    <div class="container">
+        <!-- RAG Testing Section -->
+        <section id="rag-section">
+            <h2>RAG (문서 기반 답변) 테스트</h2>
+            <div class="controls">
+                <label for="file-upload">1. 문서 업로드:</label>
+                <input type="file" id="file-upload" name="file-upload">
+                <button id="upload-button">2. 벡터스토어 생성 및 인덱싱</button>
+            </div>
+            <div class="controls">
+                <label for="rag-prompt">3. 질문 입력:</label>
+                <textarea id="rag-prompt" rows="3" placeholder="문서 내용에 대해 질문하세요..."></textarea>
+                <button id="rag-button">질문하기</button>
+            </div>
+            <div class="results">
+                <h3>결과:</h3>
+                <pre id="rag-result"></pre>
+                <h3>근거:</h3>
+                <div id="rag-evidence"></div>
+            </div>
+        </section>
+
+        <!-- Simple TTS Testing Section -->
+        <section id="simple-tts-section">
+            <h2>간단한 TTS 테스트</h2>
+            <div class="controls">
+                <label for="simple-tts-text">변환할 텍스트:</label>
+                <textarea id="simple-tts-text" rows="3">안녕하세요. 이것은 간단한 TTS 테스트입니다.</textarea>
+                <button id="simple-tts-button">음성 생성 및 재생</button>
+            </div>
+        </section>
+
+        <!-- Persona Chat Testing Section -->
+        <section id="chat-section">
+            <h2>페르소나 대화 테스트</h2>
+            <div class="controls mode-selection">
+                <label>모드 선택:</label>
+                <input type="radio" id="mode-text" name="chat-mode" value="text" checked>
+                <label for="mode-text">텍스트 채팅</label>
+                <input type="radio" id="mode-voice" name="chat-mode" value="voice">
+                <label for="mode-voice">음성 채팅 (STT/TTS)</label>
+            </div>
+            <div class="controls">
+                <button id="start-chat-button">새 대화 시작</button>
+            </div>
+            <div id="chat-window">
+                <div id="chat-messages" class="messages"></div>
+            </div>
+            <div class="chat-input">
+                <button id="stt-button" title="Record Audio for STT">🎤</button>
+                <input type="text" id="chat-input-text" placeholder="메시지를 입력하세요..." disabled>
+                <button id="send-chat-button" disabled>전송</button>
+            </div>
+            <div class="tts-controls">
+                <input type="checkbox" id="tts-enable-checkbox">
+                <label for="tts-enable-checkbox">Enable Real-time TTS</label>
+                <audio id="tts-audio-player" controls></audio>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
