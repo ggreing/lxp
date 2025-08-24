@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import assist, galaxy, coach, translate, files, vectorstores, events, sim, misc, sales
+from .routes import galaxy, coach, translate, files, events, sim, misc, sales
 from . import rabbitmq
 from .db import ensure_indexes
 from .config import settings
@@ -28,12 +28,10 @@ async def on_startup():
     await ensure_indexes(settings.app_org_id)
 
 # 라우터 등록
-app.include_router(assist.router, prefix="/assist", tags=["assist"])
+app.include_router(coach.router) # Prefix is already defined in the coach router
 app.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
-app.include_router(coach.router, prefix="/coach", tags=["coach"])
 app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(files.router, prefix="/files", tags=["files"])
-app.include_router(vectorstores.router, prefix="/vectorstores", tags=["vectorstores"])
 app.include_router(events.router, prefix="/events", tags=["events"])
 app.include_router(sim.router, prefix="/sim", tags=["sim"])
 app.include_router(sales.router, prefix="/sales", tags=["sales"])
