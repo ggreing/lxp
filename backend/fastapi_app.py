@@ -25,7 +25,8 @@ from sales_persona_backend.ai import SalesPersonaAI, SimpleChatbotAI, answer_wit
 from sales_persona_backend.personas import random_persona, SCENARIOS, PERSONAS, PRESET_PERSONAS
 from sales_persona_backend.router import router as main_router
 from sales_persona_backend.tts import router as tts_router, clients as tts_clients, warmup_tts
-from sales_persona_backend import rabbitmq as chat_rabbitmq
+from sales_persona_backend import rabbitmq
+from sales_persona_backend.worker.main import run_task_consumer
 from pydantic import BaseModel
 from typing import List
 
@@ -81,11 +82,12 @@ async def lifespan(app: FastAPI):
     # Non-blocking warmup
     asyncio.create_task(warmup_tts())
 
-    # Start RabbitMQ consumer with graceful shutdown
+    # Start RabbitMQ consumers with graceful shutdown
     loop = asyncio.get_running_loop()
     app_state["shutdown_event"] = asyncio.Event()
-    consumer_task = loop.create_task(consume_chat_messages(app_state["shutdown_event"]))
-    app_state["consumer_task"] = consumer_task
+    chat_consumer_task = loop.create_task(consume_chat_messages(app_state["shutdown_event"]))
+    worker_consumer_task = loop.create_task(run_task_consumer(app_state["shutdown_event"]))
+    app_state["consumer_tasks"] = [chat_consumer_task, worker_consumer_task]
 
     print("Application startup complete.")
     yield
@@ -93,12 +95,19 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("Application shutting down...")
     app_state["shutdown_event"].set()
-    await asyncio.sleep(1) # Give the consumer a moment to stop accepting new messages
-    consumer_task.cancel()
-    try:
-        await consumer_task
-    except asyncio.CancelledError:
-        print("RabbitMQ consumer task cancelled.")
+    await asyncio.sleep(1) # Give consumers a moment to stop accepting new messages
+
+    tasks = app_state.get("consumer_tasks", [])
+    for task in tasks:
+        task.cancel()
+
+    # Wait for all tasks to be cancelled
+    cancelled_tasks = await asyncio.gather(*tasks, return_exceptions=True)
+    for i, result in enumerate(cancelled_tasks):
+        if isinstance(result, asyncio.CancelledError):
+            print(f"Consumer task {i} was cancelled successfully.")
+        elif isinstance(result, Exception):
+            print(f"Consumer task {i} resulted in an error during shutdown: {result}")
 
     if app_state.get("redis_client"):
         await app_state["redis_client"].close()
@@ -191,19 +200,19 @@ async def handle_chat_message(
                     embedding_model=_EMBEDDING_MODEL
                 )
 
-            conn = await chat_rabbitmq.get_rabbitmq_connection()
+        conn = await rabbitmq.get_rabbitmq_connection()
             async with conn, conn.channel() as channel:
                 full_raw = ""
                 # The engine's stream_response is a generator, not an async generator
                 for chunk in engine.stream_response(seller_msg):
                     full_raw += chunk
-                    await chat_rabbitmq.publish_chat_response(channel, session_id, chunk, event="message")
+                await rabbitmq.publish_chat_response(channel, session_id, chunk, event="message")
                     await get_redis_client().lpush(f"tts_queue:{session_id}", chunk)
 
                 await set_session(session_id, engine)
                 if "<대화 종료>" in full_raw:
                      await get_redis_client().set(RKEY_SESSION_CLOSED(session_id), "true")
-                     await chat_rabbitmq.publish_chat_response(channel, session_id, "Conversation ended by AI.", event="end")
+                 await rabbitmq.publish_chat_response(channel, session_id, "Conversation ended by AI.", event="end")
 
                 await get_redis_client().publish(f"tts_done_flag:{session_id}", "done")
 
@@ -212,19 +221,21 @@ async def handle_chat_message(
 
 async def consume_chat_messages(shutdown_event: asyncio.Event):
     """Connects to RabbitMQ and consumes messages until shutdown_event is set."""
-    connection = await chat_rabbitmq.get_rabbitmq_connection()
+    connection = await rabbitmq.get_rabbitmq_connection()
 
     async with connection:
         channel = await connection.channel()
         await channel.set_qos(prefetch_count=10)
 
-        exchange = await channel.declare_exchange(
-            chat_rabbitmq.CHAT_MESSAGES_EXCHANGE, aio_pika.ExchangeType.DIRECT, durable=True
-        )
-        queue = await channel.declare_queue(
-            chat_rabbitmq.CHAT_QUEUE_NAME, durable=True
-        )
-        await queue.bind(exchange, routing_key="request")
+        # Topology is now declared in the worker consumer startup,
+        # but we need the queue object to iterate.
+        # Let's ensure it's declared and get it.
+        all_queues = await rabbitmq.declare_topology(channel)
+        queue = all_queues.get("chat")
+
+        if not queue:
+            print("FATAL: Chat queue not found after topology declaration.")
+            return
 
         print(" [x] Waiting for chat messages. To exit press CTRL+C")
 

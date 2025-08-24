@@ -1,4 +1,7 @@
-time="2025-08-14T07:58:43Z" level=warning msg="The \"PINECONE_API_KEY\" variable is not set. Defaulting to a blank string."
-time="2025-08-14T07:58:43Z" level=warning msg="The \"GOOGLE_API_KEY\" variable is not set. Defaulting to a blank string."
-time="2025-08-14T07:58:43Z" level=warning msg="The \"GEMINI_TTS_API_KEY\" variable is not set. Defaulting to a blank string."
-unable to get image 'app-api': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/app-api/json": dial unix /var/run/docker.sock: connect: permission denied
+ frontend Pulling
+ mongo Pulling
+ qdrant Pulling
+ minio Pulling
+ redis Pulling
+ rabbitmq Pulling
+toomanyrequests: You have reached your unauthenticated pull rate limit. https://www.docker.com/increase-rate-limit

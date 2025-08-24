@@ -1,16 +1,17 @@
 # --- core 서버 & API ---
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
+pydantic>=2.3
 
 # --- LLM & 임베딩 ---
-google-generativeai             # Gemini API SDK
+google-generativeai
 google-ai-generativelanguage
-sentence-transformers==2.6.1    # all-MiniLM-L6-v2
-torch>=2.0,<3.0                 # CPU/GPU 자동 선택
+sentence-transformers==2.6.1
+torch>=2.0,<3.0
 
 # --- 벡터 DB ---
 pinecone-client==3.2.2
-qdrant-client==1.9.0
+qdrant-client==1.9.1
 
 # --- TTS (대화 피드백용) ---
 gTTS==2.5.1
@@ -18,19 +19,28 @@ google-cloud-speech
 google-cloud-texttospeech
 
 # --- Google Cloud 인증 ---
-google-auth==2.28.1             # Google Cloud 인증
-google-auth-oauthlib==1.2.0     # OAuth 인증
-google-auth-httplib2==0.2.0     # HTTP 클라이언트
+google-auth==2.28.1
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
 
 # --- HTTP 클라이언트 ---
-httpx==0.27.0                   # TTS API 호출용
+httpx==0.27.0
 
 # --- STT ---
 
 # --- 편의 ---
-python-dotenv==1.0.1            # .env 로드
+python-dotenv==1.0.1
 redis==5.0.4
 aio_pika==9.4.1
+aiormq>=6.7,<7
 
 # --- 옵션: 추적/로깅 분석 ---
 pandas==2.2.2
+
+# --- Worker-specific dependencies ---
+uvloop>=0.19; sys_platform != 'win32'
+ujson>=5.9
+motor==3.4.0
+minio==7.2.7
+orjson==3.10.7
+pymongo==4.6.3
