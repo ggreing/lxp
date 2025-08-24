@@ -27,13 +27,13 @@ open http://localhost:6333/dashboard
 
 ## 엔드포인트 요약
 
-### 파일/벡터스토어
-- `POST /vectorstores` → 새 벡터스토어 생성 → `{ id }` 반환
+### 파일/코칭(문서 및 추천)
+- `POST /coach/documents` → 새 문서 컬렉션 생성 → `{ id }` 반환
 - `POST /files/upload?user_id=U&vectorstore_id=VS` (multipart) → MinIO 저장 + `vectorstore.files` 메타 업데이트
-- `POST /vectorstores/{id}/index` → MinIO 파일을 읽어 **청크→임베딩→Qdrant 업서트** (PoC: `.txt/.md` 지원)
+- `POST /coach/documents/{id}/index` → MinIO 파일을 읽어 **청크→임베딩→Qdrant 업서트** (PoC: `.txt/.md` 지원)
 
 ### 작업 생성
-- `POST /assist` | `/galaxy` | `/coach` | `/translate`  
+- `POST /coach/recommendations` | `/galaxy` | `/translate`
   → `{ job_id, thread_id, status_url }` 반환 (메시지는 `ai.tasks`로 발행)
 
 ### 이벤트 스트림 (SSE)
@@ -66,9 +66,9 @@ es.onerror = e => es.close();
 
 ## 시나리오(샘플)
 
-1) **벡터스토어 생성**
+1) **문서 컬렉션 생성**
 ```bash
-curl.exe -sX POST "http://localhost:8000/vectorstores"
+curl.exe -sX POST "http://localhost:8000/coach/documents"
 
 # -> { "id": "<vs_id>" }
 ```
@@ -81,15 +81,15 @@ curl.exe -s -F "file=@README.md" "http://localhost:8000/files/upload?user_id=u1&
 
 3) **인덱싱(Qdrant 업서트)**
 ```bash
-curl.exe -sX POST "http://localhost:8000/vectorstores/689d7670ec5d54b6610cf3a5/index"
+curl.exe -sX POST "http://localhost:8000/coach/documents/689d7670ec5d54b6610cf3a5/index"
 
 ```
 
-4) **Assist 작업 생성(+RAG)**
+4) **코칭(추천) 작업 생성(+RAG)**
 ```bash
-$JOB = (curl.exe -sL -X POST "http://localhost:8000/assist/" `
+$JOB = (curl.exe -sL -X POST "http://localhost:8000/coach/recommendations" `
   -H "Content-Type: application/json" `
-  -d '{"user_id":"u1","prompt":"What is this repo about?","vectorstore_id":"689d7670ec5d54b6610cf3a5","sub_function":"qa"}' `
+  -d '{"user_id":"u1","prompt":"What course should I take?","vectorstore_id":"689d7670ec5d54b6610cf3a5","sub_function":"recommendation"}' `
   | ConvertFrom-Json).job_id
 Write-Output $JOB
 
@@ -111,10 +111,11 @@ curl.exe -N "http://localhost:8000/events/jobs/$JOB"
 ```
 api/
   app/
-    routes/ (assist, galaxy, coach, translate, files, vectorstores, events, sim, misc)
+    routes/ (coach, galaxy, translate, files, events, sim, misc, sales)
     rabbitmq.py, db.py, storage.py, vector.py, config.py, schemas.py, rag_utils.py
-worker/
-  worker/
-    main.py, ai_assist.py, ai_galaxy.py, ai_coach.py, ai_translate.py, ai_sim.py
-    rag.py, rabbitmq.py, db.py, minio_utils.py, vector_utils.py, config.py
+backend/
+  sales_persona_backend/
+    worker/
+      main.py, ai_assist.py, ...
+    fastapi_app.py, rabbitmq.py, ...
 ```
