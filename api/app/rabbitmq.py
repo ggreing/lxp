@@ -27,7 +27,7 @@ CHAT_QUEUE_NAME = "q.chat.messages"
 # --- Worker Exchanges/Queues ---
 TASKS_EXCHANGE   = os.getenv("TASKS_EXCHANGE", "ai.tasks")
 RESULTS_EXCHANGE = os.getenv("RESULTS_EXCHANGE", "ai.results")
-DLX_EXCHANGE     = os.getenv("DLX_EXCHANGE", "ai.dlx")
+DLX_EXCHANGE     = os.getenv("DLX_EXCHANGE", "ai.dlq") # FIX: Mismatch with existing queue property
 
 Q_ASSIST     = os.getenv("Q_ASSIST",     "q.assist")
 Q_GALAXY     = os.getenv("Q_GALAXY",     "q.galaxy")
