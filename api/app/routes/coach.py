@@ -12,7 +12,6 @@ from ..rag_utils import chunk_text, embed_texts, DIM
 from ..schemas import JobRequest, JobResponse
 
 router = APIRouter(
-    prefix="/coach",
     tags=["coach"],
 )
 
