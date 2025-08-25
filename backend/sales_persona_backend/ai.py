@@ -325,14 +325,15 @@ def embed_documents(texts: list[str]) -> list[list[float]]:
     """
     Embeds a list of documents for indexing.
     """
-    import google.ai.generativelanguage as glm
-
+    # The 'google.generativeai' library is already imported at the top level as 'genai'.
     try:
-        result = glm.embed_content(
+        # Use the correct genai library and 'contents' parameter.
+        result = genai.embed_content(
             model="models/text-embedding-004",
-            content=texts,
+            contents=texts,
             task_type="retrieval_document"
         )
+        # The result is a dict with an 'embedding' key.
         return result["embedding"]
     except Exception:
         # In case of error, return empty list or handle as needed
@@ -342,16 +343,18 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
     """
     Answers a question using a RAG pipeline with a real embedding model.
     """
-    import google.ai.generativelanguage as glm
+    # The 'google.generativeai' library is already imported at the top level as 'genai'.
     from qdrant_client import QdrantClient
 
     # 1. Embed the user's prompt
     try:
-        query_embedding = glm.embed_content(
+        # Use the correct genai library and 'contents' parameter.
+        result = genai.embed_content(
             model="models/text-embedding-004",
-            content=prompt,
+            contents=prompt,
             task_type="retrieval_query"
-        )["embedding"]
+        )
+        query_embedding = result["embedding"]
     except Exception as e:
         return {"answer": f"Failed to embed prompt: {e}", "evidence": []}
 
