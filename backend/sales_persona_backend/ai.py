@@ -418,9 +418,9 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
         return {"answer": f"Failed to search Qdrant: {e}. The vector store might need to be re-indexed.", "evidence": []}
 
     if not evidence:
-        return {"answer": "I cannot answer based on the provided information. There are no courses related to your query in the given data.", "evidence": []}
+        return {"answer": f"DEBUG: Topic='{topic}'. Search returned 0 hits. I cannot answer based on the provided information.", "evidence": []}
 
-    # 3. Generate an answer using the retrieved context
+    # 4. Generate an answer using the retrieved context
     context = "\n\n".join([f"Source: {e['filename']}\nContent: {e['text']}" for e in evidence])
     rag_prompt = f"""
 Based on the following context, please provide a comprehensive answer to the user's question.
