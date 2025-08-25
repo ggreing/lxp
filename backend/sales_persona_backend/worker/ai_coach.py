@@ -1,28 +1,29 @@
-from . import rag
+import asyncio
+from .. import ai
 
 async def run(payload: dict) -> dict:
     """
-    Handles the 'coach' task by calling the internal RAG function.
+    Handles the 'coach' task by calling the main RAG function from the parent ai module.
     """
     prompt = payload.get("prompt")
     vs_id = payload.get("vectorstore_id")
     params = payload.get("params", {}) or {}
 
     if not vs_id or not prompt:
-        return {"answer": "Vector store ID and prompt are required to get a recommendation.", "evidence": []}
+        return {"answer": "Vector store ID and prompt are required for a recommendation.", "evidence": []}
 
-    # Construct a new payload compatible with rag.run
-    rag_payload = {
-        "prompt": prompt,
-        "vectorstore_id": vs_id,
-        "top_k": params.get("top_k", 3),
-        "filters": params.get("filters"),
-    }
+    top_k = params.get("top_k", 3)
 
     try:
-        # Directly call the internal RAG function with the new payload
-        return await rag.run(rag_payload)
+        # Run the synchronous answer_with_rag function in a separate thread
+        # to avoid blocking the asyncio event loop.
+        result = await asyncio.to_thread(
+            ai.answer_with_rag,
+            prompt=prompt,
+            vector_store_id=vs_id,
+            top_k=top_k
+        )
+        return result
 
     except Exception as e:
-        # Catch any unexpected errors from the RAG function
         return {"answer": f"An unexpected error occurred during RAG execution: {str(e)}", "evidence": []}
