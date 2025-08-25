@@ -50,9 +50,9 @@ def _safe_payload(v: Any):
 def build_course_text(row: Dict[str, Any]) -> str:
     parts = []
     for key in [
-        "course_title","topic","learning_objectives","keywords",
-        "prerequisites","instructor_name","language","difficulty",
-        "target_audience","interactivity_level","accessibility_features"
+        "course_title", "product_line", "topic", "learning_objectives", "keywords",
+        "prerequisites", "instructor_name", "language", "difficulty",
+        "target_audience", "interactivity_level", "accessibility_features"
     ]:
         val = row.get(key)
         if val is not None and str(val).strip():
