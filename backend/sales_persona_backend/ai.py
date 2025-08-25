@@ -327,10 +327,10 @@ def embed_documents(texts: list[str]) -> list[list[float]]:
     """
     # The 'google.generativeai' library is already imported at the top level as 'genai'.
     try:
-        # Use the correct genai library and 'contents' parameter.
+        # Use the correct genai library and 'content' parameter.
         result = genai.embed_content(
             model="models/text-embedding-004",
-            contents=texts,
+            content=texts,
             task_type="retrieval_document"
         )
         # The result is a dict with an 'embedding' key.
@@ -348,10 +348,10 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
 
     # 1. Embed the user's prompt
     try:
-        # Use the correct genai library and 'contents' parameter.
+        # Use the correct genai library and 'content' parameter.
         result = genai.embed_content(
             model="models/text-embedding-004",
-            contents=prompt,
+            content=prompt,
             task_type="retrieval_query"
         )
         query_embedding = result["embedding"]
