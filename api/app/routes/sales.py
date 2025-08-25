@@ -102,7 +102,7 @@ async def post_chat_message(req: ChatRequest):
         "thread_id": req.thread_id,
         "timestamp": datetime.utcnow().isoformat()
     }
-    await rabbitmq.publish_chat_message(payload)
+    await rabbitmq.publish_task("sim.chat", payload)
     return {"status": "message published"}
 
 @router.get("/tts/live/{session_id}")
