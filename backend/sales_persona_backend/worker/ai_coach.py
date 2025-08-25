@@ -1,42 +1,28 @@
-import httpx
-import os
-
-# The API service is on the same Docker network
-API_URL = os.getenv("API_URL", "http://api:8000")
+from . import rag
 
 async def run(payload: dict) -> dict:
     """
-    Handles the 'coach' task by calling the central RAG query endpoint.
+    Handles the 'coach' task by calling the internal RAG function.
     """
     prompt = payload.get("prompt")
     vs_id = payload.get("vectorstore_id")
+    params = payload.get("params", {}) or {}
 
     if not vs_id or not prompt:
         return {"answer": "Vector store ID and prompt are required to get a recommendation.", "evidence": []}
 
+    # Construct a new payload compatible with rag.run
+    rag_payload = {
+        "prompt": prompt,
+        "vectorstore_id": vs_id,
+        "top_k": params.get("top_k", 3),
+        "filters": params.get("filters"),
+    }
+
     try:
-        # Use a context manager for the client for proper resource management
-        async with httpx.AsyncClient(timeout=300) as client:
-            # Proxy the request to the main API's RAG endpoint
-            response = await client.post(
-                f"{API_URL}/sales/rag/query",
-                json={
-                    "prompt": prompt,
-                    "vectorstore_id": vs_id,
-                    "top_k": 3  # Use a reasonable default for top_k
-                }
-            )
-            # Raise an exception for bad status codes (4xx or 5xx)
-            response.raise_for_status()
+        # Directly call the internal RAG function with the new payload
+        return await rag.run(rag_payload)
 
-            # Return the JSON response from the RAG service
-            result = response.json()
-            return result
-
-    except httpx.HTTPStatusError as e:
-        # Provide a more informative error message if the API call fails
-        error_message = f"API call failed: {e.response.status_code} - {e.response.text}"
-        return {"answer": error_message, "evidence": []}
     except Exception as e:
-        # Catch any other unexpected errors
-        return {"answer": f"An unexpected error occurred: {str(e)}", "evidence": []}
+        # Catch any unexpected errors from the RAG function
+        return {"answer": f"An unexpected error occurred during RAG execution: {str(e)}", "evidence": []}
