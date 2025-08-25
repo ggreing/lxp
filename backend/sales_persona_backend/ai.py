@@ -339,16 +339,42 @@ def embed_documents(texts: list[str]) -> list[list[float]]:
         # In case of error, return empty list or handle as needed
         return []
 
+def _get_topic_from_prompt(prompt: str) -> str:
+    """
+    Uses an LLM to extract the main product/topic from a user prompt.
+    """
+    if not prompt or not prompt.strip():
+        return ""
+
+    extraction_prompt = f"""
+    Extract the main product name or topic from the following user query.
+    For example, from "갤럭시 S24 울트라 스펙 알려줘", extract "갤럭시 S24".
+    From "Neo QLED 8K TV에 대해 설명해줘", extract "Neo QLED 8K".
+    If no specific product or topic is mentioned, respond with an empty string.
+    Respond with only the extracted topic, and nothing else.
+
+    Query: "{prompt}"
+
+    Topic:
+    """
+    try:
+        model = genai.GenerativeModel(model_name=MODEL_NAME)
+        topic = model.generate_content(extraction_prompt).text.strip()
+        topic = topic.replace('"', '').replace("'", "").strip()
+        return topic
+    except Exception:
+        return ""
+
+
 def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
     """
     Answers a question using a RAG pipeline with a real embedding model.
     """
     # The 'google.generativeai' library is already imported at the top level as 'genai'.
-    from qdrant_client import QdrantClient
+    from qdrant_client import QdrantClient, models as qdrant_models
 
     # 1. Embed the user's prompt
     try:
-        # Use the correct genai library and 'content' parameter.
         result = genai.embed_content(
             model="models/text-embedding-004",
             content=prompt,
@@ -358,7 +384,24 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
     except Exception as e:
         return {"answer": f"Failed to embed prompt: {e}", "evidence": []}
 
-    # 2. Search in Qdrant
+    # 2. Get keyword topic for hybrid search
+    topic = _get_topic_from_prompt(prompt)
+    keyword_filter = None
+    if topic:
+        keyword_filter = qdrant_models.Filter(
+            should=[
+                qdrant_models.FieldCondition(
+                    key="keywords",
+                    match=qdrant_models.MatchText(text=topic),
+                ),
+                qdrant_models.FieldCondition(
+                    key="course_title",
+                    match=qdrant_models.MatchText(text=topic),
+                ),
+            ]
+        )
+
+    # 3. Search in Qdrant with optional filter
     try:
         qclient = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=os.getenv("QDRANT_PORT", 6333))
         collection_name = f"vs_{vector_store_id}"
@@ -366,16 +409,16 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
         hits = qclient.search(
             collection_name=collection_name,
             query_vector=query_embedding,
+            query_filter=keyword_filter,
             limit=top_k,
             with_payload=True
         )
         evidence = [{"score": float(h.score), "text": (h.payload or {}).get("text"), "filename": (h.payload or {}).get("filename")} for h in hits]
     except Exception as e:
-        # It's possible the collection doesn't exist or has a different dimension
-        return {"answer": f"Failed to search Qdrant: {e}. The vector store might need to be re-indexed with the new embedding model.", "evidence": []}
+        return {"answer": f"Failed to search Qdrant: {e}. The vector store might need to be re-indexed.", "evidence": []}
 
     if not evidence:
-        return {"answer": "I couldn't find any relevant information in the provided documents.", "evidence": []}
+        return {"answer": "I cannot answer based on the provided information. There are no courses related to your query in the given data.", "evidence": []}
 
     # 3. Generate an answer using the retrieved context
     context = "\n\n".join([f"Source: {e['filename']}\nContent: {e['text']}" for e in evidence])
