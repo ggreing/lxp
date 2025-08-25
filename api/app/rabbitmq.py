@@ -31,13 +31,11 @@ DLX_EXCHANGE     = os.getenv("DLX_EXCHANGE", "ai.dlq") # FIX: Mismatch with exis
 
 Q_ASSIST     = os.getenv("Q_ASSIST",     "q.assist")
 Q_GALAXY     = os.getenv("Q_GALAXY",     "q.galaxy")
-Q_PICKS      = os.getenv("Q_PICKS",      "q.picks")
 Q_TRANSLATE  = os.getenv("Q_TRANSLATE",  "q.translate")
 Q_SIM        = os.getenv("Q_SIM",        "q.sim.control")
 
 RK_ASSIST     = os.getenv("RK_ASSIST",     "assist.*")
 RK_GALAXY     = os.getenv("RK_GALAXY",     "galaxy.*")
-RK_PICKS      = os.getenv("RK_PICKS",      "picks.*")
 RK_TRANSLATE  = os.getenv("RK_TRANSLATE",  "translate.*")
 RK_SIM        = os.getenv("RK_SIM",        "sim.*")
 
@@ -87,21 +85,18 @@ async def declare_topology(channel: Any) -> Dict[str, aio_pika.Queue]:
     # 큐
     q_assist = await channel.declare_queue(Q_ASSIST, durable=True, arguments=args_with_dlx)
     q_galaxy = await channel.declare_queue(Q_GALAXY, durable=True, arguments=args_with_dlx)
-    q_picks  = await channel.declare_queue(Q_PICKS,  durable=True, arguments=args_with_dlx)
     q_trans  = await channel.declare_queue(Q_TRANSLATE, durable=True, arguments=args_with_dlx)
     q_sim    = await channel.declare_queue(Q_SIM, durable=True, arguments=args_with_dlx)
 
     # 바인딩
     await q_assist.bind(TASKS_EXCHANGE, RK_ASSIST)
     await q_galaxy.bind(TASKS_EXCHANGE, RK_GALAXY)
-    await q_picks.bind(TASKS_EXCHANGE, RK_PICKS)
     await q_trans.bind(TASKS_EXCHANGE, RK_TRANSLATE)
     await q_sim.bind(TASKS_EXCHANGE, RK_SIM)
 
     # DLQ 큐들
     await channel.declare_queue(f"{Q_ASSIST}{DLQ_SUFFIX}", durable=True)
     await channel.declare_queue(f"{Q_GALAXY}{DLQ_SUFFIX}", durable=True)
-    await channel.declare_queue(f"{Q_PICKS}{DLQ_SUFFIX}",  durable=True)
     await channel.declare_queue(f"{Q_TRANSLATE}{DLQ_SUFFIX}", durable=True)
     await channel.declare_queue(f"{Q_SIM}{DLQ_SUFFIX}", durable=True)
 
@@ -109,7 +104,6 @@ async def declare_topology(channel: Any) -> Dict[str, aio_pika.Queue]:
         "chat": chat_queue,
         "assist": q_assist,
         "galaxy": q_galaxy,
-        "picks": q_picks,
         "translate": q_trans,
         "sim": q_sim,
     }
