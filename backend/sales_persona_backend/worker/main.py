@@ -11,10 +11,10 @@ from aio_pika import IncomingMessage
 from sales_persona_backend import rabbitmq
 
 try:
-    from . import ai_assist, ai_galaxy, ai_coach, ai_translate, ai_sim
+    from . import ai_assist, ai_galaxy, ai_picks, ai_translate, ai_sim
 except ImportError as e:
     print(f"Could not import AI modules: {e}")
-    ai_assist = ai_galaxy = ai_coach = ai_translate = ai_sim = None
+    ai_assist = ai_galaxy = ai_picks = ai_translate = ai_sim = None
 
 
 async def _dispatch_task(routing_key: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -24,8 +24,8 @@ async def _dispatch_task(routing_key: str, payload: Dict[str, Any]) -> Dict[str,
         return await ai_assist.run(payload)
     if prefix == "galaxy" and ai_galaxy and hasattr(ai_galaxy, "run"):
         return await ai_galaxy.run(payload)
-    if prefix == "coach" and ai_coach and hasattr(ai_coach, "run"):
-        return await ai_coach.run(payload)
+    if prefix == "picks" and ai_picks and hasattr(ai_picks, "run"):
+        return await ai_picks.run(payload)
     if prefix == "translate" and ai_translate and hasattr(ai_translate, "run"):
         return await ai_translate.run(payload)
     if prefix == "sim" and ai_sim and hasattr(ai_sim, "control"):
@@ -73,7 +73,7 @@ async def run_task_consumer(shutdown_event: asyncio.Event):
         all_queues = await rabbitmq.declare_topology(channel)
         worker_queues = {
             name: queue for name, queue in all_queues.items()
-            if name in ["assist", "galaxy", "coach", "translate", "sim"]
+            if name in ["assist", "galaxy", "picks", "translate", "sim"]
         }
 
         print(f" [x] Waiting for worker tasks on queues: {list(worker_queues.keys())}")

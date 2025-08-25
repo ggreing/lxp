@@ -12,7 +12,7 @@ from ..rag_utils import chunk_text, embed_texts, DIM
 from ..schemas import JobRequest, JobResponse
 
 router = APIRouter(
-    tags=["coach"],
+    tags=["Galaxy Picks"],
 )
 
 # RAG document storage endpoints (from vectorstores.py)
@@ -238,13 +238,13 @@ async def index_vectorstore(vectorstore_id: str, max_points: int = 20000):
     return {"indexed": total_indexed, "collection": f"vs_{vectorstore_id}"}
 
 
-# Course recommendation endpoint (from assist.py)
+# Galaxy Picks endpoint
 
 @router.post("/recommendations", response_model=JobResponse)
-async def recommend_courses(req: JobRequest):
-    """Triggers a course recommendation task."""
-    FUNCTION_NAME = "coach"
-    ROUTING_KEY = "coach.request"
+async def recommend_picks(req: JobRequest):
+    """Triggers a Galaxy Picks recommendation task."""
+    FUNCTION_NAME = "picks"
+    ROUTING_KEY = "picks.request"
 
     await ensure_indexes(settings.app_org_id)
     db = inst_db(settings.app_org_id)

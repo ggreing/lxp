@@ -27,13 +27,13 @@ open http://localhost:6333/dashboard
 
 ## 엔드포인트 요약
 
-### 파일/코칭(문서 및 추천)
-- `POST /coach/documents` → 새 문서 컬렉션 생성 → `{ id }` 반환
+### 파일/Galaxy Picks(문서 및 추천)
+- `POST /picks/documents` → 새 문서 컬렉션 생성 → `{ id }` 반환
 - `POST /files/upload?user_id=U&vectorstore_id=VS` (multipart) → MinIO 저장 + `vectorstore.files` 메타 업데이트
-- `POST /coach/documents/{id}/index` → MinIO 파일을 읽어 **청크→임베딩→Qdrant 업서트** (PoC: `.txt/.md` 지원)
+- `POST /picks/documents/{id}/index` → MinIO 파일을 읽어 **청크→임베딩→Qdrant 업서트** (PoC: `.txt/.md` 지원)
 
 ### 작업 생성
-- `POST /coach/recommendations` | `/galaxy` | `/translate`
+- `POST /picks/recommendations` | `/galaxy` | `/translate`
   → `{ job_id, thread_id, status_url }` 반환 (메시지는 `ai.tasks`로 발행)
 
 ### 이벤트 스트림 (SSE)
@@ -58,8 +58,8 @@ es.onerror = e => es.close();
 
 ## RabbitMQ 토폴로지
 - Exchanges: `ai.tasks`(topic), `ai.results`(topic), `ai.dlq`(fanout)
-- Queues: `q.assist`, `q.galaxy`, `q.coach`, `q.translate`, `q.sim.control`, `q.dlq`
-- 라우팅키: `assist.* | galaxy.* | coach.* | translate.* | sim.control.*`
+- Queues: `q.assist`, `q.galaxy`, `q.picks`, `q.translate`, `q.sim.control`, `q.dlq`
+- 라우팅키: `assist.* | galaxy.* | picks.* | translate.* | sim.control.*`
 
 ## Mongo 인덱스
 부팅 시 자동 보장(API `ensure_indexes`).
@@ -68,7 +68,7 @@ es.onerror = e => es.close();
 
 1) **문서 컬렉션 생성**
 ```bash
-curl.exe -sX POST "http://localhost:8000/coach/documents"
+curl.exe -sX POST "http://localhost:8000/picks/documents"
 
 # -> { "id": "<vs_id>" }
 ```
@@ -81,13 +81,13 @@ curl.exe -s -F "file=@README.md" "http://localhost:8000/files/upload?user_id=u1&
 
 3) **인덱싱(Qdrant 업서트)**
 ```bash
-curl.exe -sX POST "http://localhost:8000/coach/documents/689d7670ec5d54b6610cf3a5/index"
+curl.exe -sX POST "http://localhost:8000/picks/documents/689d7670ec5d54b6610cf3a5/index"
 
 ```
 
-4) **코칭(추천) 작업 생성(+RAG)**
+4) **Galaxy Picks(추천) 작업 생성(+RAG)**
 ```bash
-$JOB = (curl.exe -sL -X POST "http://localhost:8000/coach/recommendations" `
+$JOB = (curl.exe -sL -X POST "http://localhost:8000/picks/recommendations" `
   -H "Content-Type: application/json" `
   -d '{"user_id":"u1","prompt":"What course should I take?","vectorstore_id":"689d7670ec5d54b6610cf3a5","sub_function":"recommendation"}' `
   | ConvertFrom-Json).job_id
@@ -111,7 +111,7 @@ curl.exe -N "http://localhost:8000/events/jobs/$JOB"
 ```
 api/
   app/
-    routes/ (coach, galaxy, translate, files, events, sim, misc, sales)
+    routes/ (picks, galaxy, translate, files, events, sim, misc, sales)
     rabbitmq.py, db.py, storage.py, vector.py, config.py, schemas.py, rag_utils.py
 backend/
   sales_persona_backend/

@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ragEvidence.innerHTML = '';
         log(ragResult, '1. Creating vector store...');
         try {
-            const vsResponse = await fetch('/coach/documents', { method: 'POST' });
+            const vsResponse = await fetch('/picks/documents', { method: 'POST' });
             if (!vsResponse.ok) throw new Error(`Failed to create document store (${vsResponse.status})`);
             const vsData = await vsResponse.json();
             vectorstoreId = vsData.id;
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             log(ragResult, '   File uploaded successfully.');
 
             log(ragResult, '3. Indexing file...');
-            const indexResponse = await fetch(`/coach/documents/${vectorstoreId}/index`, { method: 'POST' });
+            const indexResponse = await fetch(`/picks/documents/${vectorstoreId}/index`, { method: 'POST' });
             if (!indexResponse.ok) throw new Error(`Failed to index file (${indexResponse.status})`);
             const indexData = await indexResponse.json();
             log(ragResult, `   Indexing complete. ${indexData.indexed} points added.`);
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ragResult.textContent = 'Thinking...';
         ragEvidence.innerHTML = '';
         try {
-            const response = await fetch('/coach/recommendations', {
+            const response = await fetch('/picks/recommendations', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: 'frontend_user', prompt: prompt, vectorstore_id: vectorstoreId }),
