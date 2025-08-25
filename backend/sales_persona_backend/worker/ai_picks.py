@@ -3,7 +3,7 @@ from .. import ai
 
 async def run(payload: dict) -> dict:
     """
-    Handles the 'coach' task by calling the main RAG function from the parent ai module.
+    Handles the 'picks' task by calling the main RAG function from the parent ai module.
     """
     prompt = payload.get("prompt")
     vs_id = payload.get("vectorstore_id")
