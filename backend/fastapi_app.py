@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse, Response
+from starlette.concurrency import run_in_threadpool
 import uuid
 import os
 import base64
@@ -497,7 +498,8 @@ async def rag_query(req: RAGQueryRequest):
     """
     Performs a one-shot RAG query using the new embedding model.
     """
-    result = answer_with_rag(req.prompt, req.vectorstore_id, req.top_k)
+    # Run the synchronous, blocking function in a separate thread pool
+    result = await run_in_threadpool(answer_with_rag, req.prompt, req.vectorstore_id, req.top_k)
     return JSONResponse(result)
 
 class RAGEmbedRequest(BaseModel):
