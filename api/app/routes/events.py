@@ -1,16 +1,19 @@
-import json, aio_pika
+import json
+import aio_pika
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from ..rabbitmq import connect, RESULTS_EXCHANGE
+from .. import rabbitmq
 
 router = APIRouter()
 
 @router.get("/jobs/{job_id}")
 async def sse_job(job_id: str):
     async def gen():
-        conn = await connect()
+        # Use the unified connection function
+        conn = await rabbitmq.get_rabbitmq_connection()
         ch = await conn.channel()
-        ex = await ch.declare_exchange(RESULTS_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
+        # Use the compatibility layer for declaring the exchange
+        ex = await rabbitmq._compat_declare_exchange(ch, rabbitmq.RESULTS_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
         q = await ch.declare_queue("", exclusive=True, durable=False, auto_delete=True)
         await q.bind(ex, routing_key="#")
         try:
@@ -25,8 +28,10 @@ async def sse_job(job_id: str):
                             yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         finally:
             try:
-                await q.unbind(ex, routing_key="#"); await q.delete(if_unused=False, if_empty=False)
+                await q.unbind(ex, routing_key="#")
+                await q.delete(if_unused=False, if_empty=False)
             except Exception:
                 pass
-            await ch.close(); await conn.close()
+            await ch.close()
+            await conn.close()
     return StreamingResponse(gen(), media_type="text/event-stream")

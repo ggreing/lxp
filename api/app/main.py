@@ -23,7 +23,11 @@ app.add_middleware(
 @app.on_event("startup")
 async def on_startup():
     # RabbitMQ 토폴로지(큐/익스체인지) 보장
-    await rabbitmq.ensure_topology()
+    # The new rabbitmq.py uses a different pattern for topology declaration
+    conn = await rabbitmq.get_rabbitmq_connection()
+    async with conn:
+        ch = await conn.channel()
+        await rabbitmq.declare_topology(ch)
     # Mongo 인덱스 보장(중복 정리 포함)
     await ensure_indexes(settings.app_org_id)
 
