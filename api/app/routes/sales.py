@@ -64,7 +64,7 @@ async def stream_chat_responses(session_id: str):
     and streams messages to the client via SSE.
     """
     async def event_generator():
-        conn = await rabbitmq.connect()
+        conn = await rabbitmq.get_rabbitmq_connection()
         async with conn:
             ch = await conn.channel()
             # Declare an exclusive queue, it will be deleted when connection is closed
