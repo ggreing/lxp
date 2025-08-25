@@ -68,7 +68,7 @@ try {
     $FilePath = (Resolve-Path -LiteralPath $FilePath).Path
 
     Write-Host "1) Creating document collection..." -ForegroundColor Cyan
-    $vsResp = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/picks/documents"
+    $vsResp = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/galaxy/documents"
     $vsId = $vsResp.id
     if (-not $vsId) { throw "Failed to create vectorstore. Response:`n$($vsResp | ConvertTo-Json -Depth 6)" }
     Write-Host "   -> vectorstore_id: $vsId" -ForegroundColor Green
@@ -80,7 +80,7 @@ try {
     else { Write-Host "   -> upload ok" -ForegroundColor Green }
 
     Write-Host "3) Indexing (Qdrant upsert)..." -ForegroundColor Cyan
-    $idxResp = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/picks/documents/$vsId/index"
+    $idxResp = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/galaxy/documents/$vsId/index"
     if (-not $idxResp) { Write-Warning "Index response was empty or not JSON." }
     else { Write-Host "   -> index requested" -ForegroundColor Green }
 
@@ -94,7 +94,7 @@ try {
 
     # Escape quotes for curl.exe -d "<json>" (wrap later, so keep backslashes)
     $escapedBody = $body.Replace('"','\"')
-    $assistUrl = "$BaseUrl/picks/recommendations"
+    $assistUrl = "$BaseUrl/galaxy/recommendations"
     $jobResp = Invoke-CurlJson -Method "POST" -Url $assistUrl -BodyJson $escapedBody
     $jobId = $jobResp.job_id
     if (-not $jobId) {
