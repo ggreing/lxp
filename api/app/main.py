@@ -28,7 +28,7 @@ async def on_startup():
     await ensure_indexes(settings.app_org_id)
 
 # 라우터 등록
-app.include_router(coach.router) # Prefix is already defined in the coach router
+app.include_router(coach.router, prefix="/coach", tags=["coach"])
 app.include_router(galaxy.router, prefix="/galaxy", tags=["galaxy"])
 app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(files.router, prefix="/files", tags=["files"])
