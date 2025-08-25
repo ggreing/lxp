@@ -347,11 +347,12 @@ def _get_topic_from_prompt(prompt: str) -> str:
         return ""
 
     extraction_prompt = f"""
-    Extract the main product name or topic from the following user query.
+    Extract the main, simplified, base product name or topic from the following user query.
     For example, from "갤럭시 S24 울트라 스펙 알려줘", extract "갤럭시 S24".
+    From "The new features of the Galaxy S24 Ultra phone", extract "갤럭시 S24".
     From "Neo QLED 8K TV에 대해 설명해줘", extract "Neo QLED 8K".
     If no specific product or topic is mentioned, respond with an empty string.
-    Respond with only the extracted topic, and nothing else.
+    Respond with only the extracted base topic, and nothing else.
 
     Query: "{prompt}"
 
@@ -418,7 +419,7 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
         return {"answer": f"Failed to search Qdrant: {e}. The vector store might need to be re-indexed.", "evidence": []}
 
     if not evidence:
-        return {"answer": f"DEBUG: Topic='{topic}'. Search returned 0 hits. I cannot answer based on the provided information.", "evidence": []}
+        return {"answer": "I cannot answer based on the provided information. There are no courses related to your query in the given data.", "evidence": []}
 
     # 4. Generate an answer using the retrieved context
     context = "\n\n".join([f"Source: {e['filename']}\nContent: {e['text']}" for e in evidence])
