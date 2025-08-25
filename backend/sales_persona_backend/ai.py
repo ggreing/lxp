@@ -407,6 +407,7 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
         qclient = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=os.getenv("QDRANT_PORT", 6333))
         collection_name = f"vs_{vector_store_id}"
 
+        # First attempt: hybrid search
         hits = qclient.search(
             collection_name=collection_name,
             query_vector=query_embedding,
@@ -414,6 +415,17 @@ def answer_with_rag(prompt: str, vector_store_id: str, top_k: int = 3) -> dict:
             limit=top_k,
             with_payload=True
         )
+
+        # Fallback: if hybrid search yields no results, try a pure vector search
+        if not hits and keyword_filter is not None:
+            hits = qclient.search(
+                collection_name=collection_name,
+                query_vector=query_embedding,
+                query_filter=None, # No filter
+                limit=top_k,
+                with_payload=True
+            )
+
         evidence = [{"score": float(h.score), "text": (h.payload or {}).get("text"), "filename": (h.payload or {}).get("filename")} for h in hits]
     except Exception as e:
         return {"answer": f"Failed to search Qdrant: {e}. The vector store might need to be re-indexed.", "evidence": []}
